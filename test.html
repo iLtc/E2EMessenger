@@ -10,32 +10,27 @@
 <script src="InMemorySignalProtocolStore.js"></script>
 <script src="base64-binary.js"></script>
 <script>
-    let init = function() {
-
-    };
-
     let store = new SignalProtocolStore();
 
-    generateIdentity(store).then(function() {
-        let preKeyId = 1;
-        let signedKeyId = 1;
-        return generatePreKeyBundle(store, preKeyId, signedKeyId);
-    }).then(function(preKeyBundle) {
-        preKeyBundle['identityKey'] = base64ArrayBuffer(preKeyBundle['identityKey']);
-        preKeyBundle['preKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['preKey']['publicKey']);
-        preKeyBundle['signedPreKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['publicKey']);
-        preKeyBundle['signedPreKey']['signature'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['signature']);
+    let init = function() {
+        generateIdentity(store).then(function() {
+            let preKeyId = 1;
+            let signedKeyId = 1;
+            return generatePreKeyBundle(store, preKeyId, signedKeyId);
+        }).then(function(preKeyBundle) {
+            preKeyBundle['identityKey'] = base64ArrayBuffer(preKeyBundle['identityKey']);
+            preKeyBundle['preKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['preKey']['publicKey']);
+            preKeyBundle['signedPreKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['publicKey']);
+            preKeyBundle['signedPreKey']['signature'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['signature']);
 
-        console.log(preKeyBundle);
-        console.log(JSON.stringify(preKeyBundle));
-
-        return fetch('http://www.example.com', {
-            body: JSON.stringify(preKeyBundle), // must match 'Content-Type' header
-            method: 'POST', // *GET, POST, PUT, DELETE, etc.
+            sendPreKeyBundle(preKeyBundle);
         })
-    })
+    };
 
-
+    let sendPreKeyBundle = function(preKeyBundle) {
+        // TODO: Send PreKeyBundle
+        // TODO: Get ID and show ID
+    }
 </script>
 </body>
 </html>
