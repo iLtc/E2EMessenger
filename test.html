@@ -9,7 +9,7 @@
 <script src="libsignal-protocol.js"></script>
 <script src="InMemorySignalProtocolStore.js"></script>
 <script>
-    var KeyHelper = libsignal.KeyHelper;
+    let KeyHelper = libsignal.KeyHelper;
 
     function generateIdentity(store) {
         return Promise.all([
@@ -26,15 +26,15 @@
             store.getIdentityKeyPair(),
             store.getLocalRegistrationId()
         ]).then(function(result) {
-            var identity = result[0];
-            var registrationId = result[1];
+            let identity = result[0];
+            let registrationId = result[1];
 
             return Promise.all([
                 KeyHelper.generatePreKey(preKeyId),
                 KeyHelper.generateSignedPreKey(identity, signedPreKeyId),
             ]).then(function(keys) {
-                var preKey = keys[0];
-                var signedPreKey = keys[1];
+                let preKey = keys[0];
+                let signedPreKey = keys[1];
 
                 store.storePreKey(preKeyId, preKey.keyPair);
                 store.storeSignedPreKey(signedPreKeyId, signedPreKey.keyPair);
@@ -55,6 +55,17 @@
             });
         });
     }
+
+    // let ALICE_ADDRESS = new libsignal.SignalProtocolAddress("aaaaaaaaaa", 1);
+    let store = new SignalProtocolStore();
+
+    generateIdentity(store).then(function() {
+        let preKeyId = 1;
+        let signedKeyId = 1;
+        return generatePreKeyBundle(store, preKeyId, signedKeyId);
+    }).then(function(preKeyBundle) {
+        console.log(preKeyBundle);
+    })
 </script>
 </body>
 </html>
