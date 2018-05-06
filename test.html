@@ -8,6 +8,7 @@
 
 <script src="libsignal-protocol.js"></script>
 <script src="InMemorySignalProtocolStore.js"></script>
+<script src="base64-binary.js"></script>
 <script>
     let KeyHelper = libsignal.KeyHelper;
 
@@ -64,7 +65,9 @@
         let signedKeyId = 1;
         return generatePreKeyBundle(store, preKeyId, signedKeyId);
     }).then(function(preKeyBundle) {
-        console.log(preKeyBundle);
+        let base64PreKeyBundle = {
+
+        }
     })
 </script>
 </body>
