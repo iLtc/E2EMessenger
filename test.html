@@ -5,14 +5,18 @@
     <title>E2EMessenger</title>
 </head>
 <body>
+<div id="log"></div>
 
 <script src="libsignal-protocol.js"></script>
 <script src="InMemorySignalProtocolStore.js"></script>
+<script src="main.js"></script>
 <script src="base64-binary.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script>
     let store = new SignalProtocolStore();
 
     let init = function() {
+        $("#log").append('<p id="gingPKB">Generating PreKeyBundle ...... </p>');
         generateIdentity(store).then(function() {
             let preKeyId = 1;
             let signedKeyId = 1;
@@ -23,14 +27,19 @@
             preKeyBundle['signedPreKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['publicKey']);
             preKeyBundle['signedPreKey']['signature'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['signature']);
 
+            $("#gingPKB").append("Done");
+
             sendPreKeyBundle(preKeyBundle);
         })
     };
 
     let sendPreKeyBundle = function(preKeyBundle) {
+        $("#log").append('<p id="singPKB">Sending PreKeyBundle and Getting ID ...... </p>');
         // TODO: Send PreKeyBundle
         // TODO: Get ID and show ID
-    }
+    };
+
+    init();
 </script>
 </body>
 </html>
