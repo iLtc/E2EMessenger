@@ -35,10 +35,26 @@
 
     let sendPreKeyBundle = function(preKeyBundle) {
         $("#log").append('<p id="singPKB">Sending PreKeyBundle and Getting ID ...... </p>');
-        // TODO: Send PreKeyBundle
-        // TODO: Get ID and show ID
+
+        fetch('https://e2e-server.herokuapp.com/register', {
+            method: 'POST',
+            body: JSON.stringify(preKeyBundle)
+        }).then(function (response) {
+            if (!response.ok) {
+                // TODO:
+            } else {
+                $("#singPKB").append("Done");
+
+                return response.json()
+            }
+        }).then(function (json) {
+            showID(json['id']);
+        })
     };
 
+    let showID = function(id) {
+        $("#log").append('<p>Your ID is <b>' + id +'</b></p>');
+    };
     init();
 </script>
 </body>
