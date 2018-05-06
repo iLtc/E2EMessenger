@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>E2EMessenger</title>
 </head>
 <body>
 
@@ -10,54 +10,10 @@
 <script src="InMemorySignalProtocolStore.js"></script>
 <script src="base64-binary.js"></script>
 <script>
-    let KeyHelper = libsignal.KeyHelper;
+    let init = function() {
 
-    function generateIdentity(store) {
-        return Promise.all([
-            KeyHelper.generateIdentityKeyPair(),
-            KeyHelper.generateRegistrationId(),
-        ]).then(function(result) {
-            store.put('identityKey', result[0]);
-            store.put('registrationId', result[1]);
-        });
-    }
+    };
 
-    function generatePreKeyBundle(store, preKeyId, signedPreKeyId) {
-        return Promise.all([
-            store.getIdentityKeyPair(),
-            store.getLocalRegistrationId()
-        ]).then(function(result) {
-            let identity = result[0];
-            let registrationId = result[1];
-
-            return Promise.all([
-                KeyHelper.generatePreKey(preKeyId),
-                KeyHelper.generateSignedPreKey(identity, signedPreKeyId),
-            ]).then(function(keys) {
-                let preKey = keys[0];
-                let signedPreKey = keys[1];
-
-                store.storePreKey(preKeyId, preKey.keyPair);
-                store.storeSignedPreKey(signedPreKeyId, signedPreKey.keyPair);
-
-                return {
-                    identityKey: identity.pubKey,
-                    registrationId : registrationId,
-                    preKey:  {
-                        keyId     : preKeyId,
-                        publicKey : preKey.keyPair.pubKey
-                    },
-                    signedPreKey: {
-                        keyId     : signedPreKeyId,
-                        publicKey : signedPreKey.keyPair.pubKey,
-                        signature : signedPreKey.signature
-                    }
-                };
-            });
-        });
-    }
-
-    // let ALICE_ADDRESS = new libsignal.SignalProtocolAddress("aaaaaaaaaa", 1);
     let store = new SignalProtocolStore();
 
     generateIdentity(store).then(function() {
@@ -65,10 +21,21 @@
         let signedKeyId = 1;
         return generatePreKeyBundle(store, preKeyId, signedKeyId);
     }).then(function(preKeyBundle) {
-        let base64PreKeyBundle = {
+        preKeyBundle['identityKey'] = base64ArrayBuffer(preKeyBundle['identityKey']);
+        preKeyBundle['preKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['preKey']['publicKey']);
+        preKeyBundle['signedPreKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['publicKey']);
+        preKeyBundle['signedPreKey']['signature'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['signature']);
 
-        }
+        console.log(preKeyBundle);
+        console.log(JSON.stringify(preKeyBundle));
+
+        return fetch('http://www.example.com', {
+            body: JSON.stringify(preKeyBundle), // must match 'Content-Type' header
+            method: 'POST', // *GET, POST, PUT, DELETE, etc.
+        })
     })
+
+
 </script>
 </body>
 </html>
