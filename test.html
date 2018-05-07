@@ -6,6 +6,15 @@
 </head>
 <body>
 <div id="log"></div>
+<div id="connection-div" style="display: none;">
+    <p>Your ID is <b id="connection-id"></b>. If you are the receiver, please give this ID to the sender. If you are the sender, please ask the receiver for the ID and type it below. </p>
+    <form id="connection-form">
+        <label for="receiver-id">Receiver ID: </label>
+        <input type="text" id="receiver-id">
+        <input type="submit" value="Connect">
+    </form>
+
+</div>
 
 <script src="libsignal-protocol.js"></script>
 <script src="InMemorySignalProtocolStore.js"></script>
@@ -54,7 +63,22 @@
 
     let showID = function(id) {
         $("#log").append('<p>Your ID is <b>' + id +'</b></p>');
+        $("#connection-id").html(id);
+
+        $("#connection-div").slideDown();
     };
+
+    let sendRequest = function() {
+        if ($("#receiver-id").val() === '') {
+            alert("Please type Receiver ID!");
+            return false;
+        }
+
+        return false;
+    };
+
+    $("#connection-form").on("submit", sendRequest);
+
     init();
 </script>
 </body>
