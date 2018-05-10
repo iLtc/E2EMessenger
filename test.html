@@ -5,7 +5,6 @@
     <title>E2EMessenger</title>
 </head>
 <body>
-<div id="log"></div>
 <div id="connection-div" style="display: none;">
     <p>Your ID is <b id="connection-id"></b>. If you are the receiver, please give this ID to the sender. If you are the sender, please ask the receiver for the ID and type it below. </p>
     <form id="connection-form">
@@ -16,18 +15,21 @@
 
 </div>
 
+<div id="log"></div>
+
 <script src="libsignal-protocol.js"></script>
 <script src="InMemorySignalProtocolStore.js"></script>
 <script src="main.js"></script>
 <script src="base64-binary.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script>
-    let server = "http://18.218.135.169:8080";
+    let server = "http://18.219.189.97:8080";
 
     let store = new SignalProtocolStore();
     let myId = null;
     let myAccessToken = null;
     let requestCount = 0;
+    let isReveiver = true;
 
     let init = function() {
         $("#log").append('<p id="gingPKB">Generating PreKeyBundle ...... </p>');
@@ -66,6 +68,8 @@
             myAccessToken = json['accessToken'];
 
             showID();
+
+            setTimeout(checkConnectRequest, 3000);
         })
     };
 
@@ -95,9 +99,6 @@
         $("#log").append('<p id="' + pid + '">Sending Connection Request ...... </p>');
         fetch(server + '/connect?accessToken=' + myAccessToken, {
             method: 'POST',
-            headers: {
-                'Accept': 'application/json'
-            },
             body: JSON.stringify({"receiverId": value})
         }).then(function (response) {
             if (!response.ok) {
@@ -111,11 +112,75 @@
             if (json['status'] === 'failed') {
                 alert(json['msg']);
             } else {
-                alert("Done");
+                $("#connection-div").slideUp();
+
+                isReveiver = false;
+
+                setTimeout(checkConnectResult, 3000);
             }
         });
 
         return false;
+    };
+
+    let checkConnectResult = function() {
+        requestCount += 1;
+
+        pid = 'cingCR' + requestCount;
+        $("#log").append('<p id="' + pid + '">Checking Request Result ...... </p>');
+
+        fetch(server + '/confirm?accessToken=' + myAccessToken, {
+            method: 'GET'
+        }).then(function (response) {
+            if (!response.ok) {
+                // TODO:
+            } else {
+                return response.json()
+            }
+        }).then(function (json) {
+            if (json['status'] === 'failed') {
+                alert(json['msg']);
+            } else {
+                if ("msg" in json) {
+                    $("#" + pid).append(json['msg']);
+
+                    setTimeout(checkConnectResult, 3000);
+                } else {
+                    // TODO: Confirm or Decline
+                }
+            }
+        });
+    };
+
+    let checkConnectRequest = function() {
+        if (!isReveiver) return;
+
+        requestCount += 1;
+
+        pid = 'checkCR' + requestCount;
+        $("#log").append('<p id="' + pid + '">Checking Connect Request ...... </p>');
+
+        fetch(server + '/connect?accessToken=' + myAccessToken, {
+            method: 'GET'
+        }).then(function (response) {
+            if (!response.ok) {
+                // TODO:
+            } else {
+                return response.json()
+            }
+        }).then(function (json) {
+            if (json['status'] === 'failed') {
+                alert(json['msg']);
+            } else {
+                if ("msg" in json) {
+                    $("#" + pid).append(json['msg']);
+
+                    setTimeout(checkConnectRequest, 3000);
+                } else {
+                    alert(json['senderId'])
+                }
+            }
+        });
     };
 
     $("#connection-form").on("submit", sendConnectRequest);
