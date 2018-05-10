@@ -22,7 +22,12 @@
 <script src="base64-binary.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script>
+    let server = "http://18.218.135.169:8080";
+
     let store = new SignalProtocolStore();
+    let myId = null;
+    let myAccessToken = null;
+    let requestCount = 0;
 
     let init = function() {
         $("#log").append('<p id="gingPKB">Generating PreKeyBundle ...... </p>');
@@ -43,9 +48,9 @@
     };
 
     let sendPreKeyBundle = function(preKeyBundle) {
-        $("#log").append('<p id="singPKB">Sending PreKeyBundle and Getting ID ...... </p>');
+        $("#log").append('<p id="singPKB">Sending PreKeyBundle and Getting ID and AccessToken ...... </p>');
 
-        fetch('https://e2e-server.herokuapp.com/register', {
+        fetch(server + '/register', {
             method: 'POST',
             body: JSON.stringify(preKeyBundle)
         }).then(function (response) {
@@ -57,27 +62,63 @@
                 return response.json()
             }
         }).then(function (json) {
-            showID(json['id']);
+            myId = json['id'];
+            myAccessToken = json['accessToken'];
+
+            showID();
         })
     };
 
-    let showID = function(id) {
-        $("#log").append('<p>Your ID is <b>' + id +'</b></p>');
-        $("#connection-id").html(id);
+    let showID = function() {
+        $("#log").append('<p>Your ID is <b>' + myId +'</b></p>');
+        $("#connection-id").html(myId);
 
         $("#connection-div").slideDown();
     };
 
-    let sendRequest = function() {
-        if ($("#receiver-id").val() === '') {
+    let sendConnectRequest = function() {
+        requestCount += 1;
+
+        let value = $("#receiver-id").val();
+        if (value === '') {
             alert("Please type Receiver ID!");
             return false;
         }
 
+        if (value === myId) {
+            alert("You cannot connect to yourself.");
+            return false;
+        }
+
+        pid = 'singCR' + requestCount;
+
+        $("#log").append('<p id="' + pid + '">Sending Connection Request ...... </p>');
+        fetch(server + '/connect?accessToken=' + myAccessToken, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({"receiverId": value})
+        }).then(function (response) {
+            if (!response.ok) {
+                // TODO:
+            } else {
+                $("#" + pid).append("Done");
+
+                return response.json()
+            }
+        }).then(function (json) {
+            if (json['status'] === 'failed') {
+                alert(json['msg']);
+            } else {
+                alert("Done");
+            }
+        });
+
         return false;
     };
 
-    $("#connection-form").on("submit", sendRequest);
+    $("#connection-form").on("submit", sendConnectRequest);
 
     init();
 </script>
