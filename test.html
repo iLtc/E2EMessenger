@@ -48,26 +48,30 @@
             let signedKeyId = 1;
             return generatePreKeyBundle(store, preKeyId, signedKeyId);
         }).then(function(preKeyBundle) {
-            console.log(preKeyBundle);
-
-            preKeyBundle['identityKey'] = base64ArrayBuffer(preKeyBundle['identityKey']);
-            preKeyBundle['preKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['preKey']['publicKey']);
-            preKeyBundle['signedPreKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['publicKey']);
-            preKeyBundle['signedPreKey']['signature'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['signature']);
+            console.log(preKeyBundle)
+            let en_bundle = encode_bundle(preKeyBundle);
 
             $("#gingPKB").append("Done");
 
-            sendPreKeyBundle(preKeyBundle);
+            sendPreKeyBundle(en_bundle);
         })
     };
 
     let sendPreKeyBundle = function(preKeyBundle) {
         $("#log").append('<p id="singPKB">Sending PreKeyBundle and Getting ID and AccessToken ...... </p>');
 
+        let form = new FormData();
+
+        for (let key in preKeyBundle) {
+            console.log(key)
+            form.append(key, preKeyBundle[key])
+        }
+
         fetch(server + '/register', {
             method: 'POST',
-            body: JSON.stringify(preKeyBundle)
+            body: form
         }).then(function (response) {
+
             if (!response.ok) {
                 // TODO:
             } else {
@@ -279,6 +283,60 @@
             //mySessionCipher = new libsignal.SessionCipher(store, other_address);
         })
     };
+
+    let encode_bundle = function(bundle) {
+        return {
+            identityKey: new Blob([bundle['identityKey']]),
+            registrationId: bundle['registrationId'],
+            preKey_keyId: bundle['preKey']['keyId'],
+            preKey_publicKey: new Blob([bundle['preKey']['publicKey']]),
+            signedPreKey_keyId: bundle['signedPreKey']['keyId'],
+            signedPreKey_publicKey: new Blob([bundle['signedPreKey']['publicKey']]),
+            signedPreKey_signature: new Blob([bundle['signedPreKey']['signature']]),
+        }
+    };
+
+    let decode_bundle = function(blob, callback) {
+        let result = {
+            identityKey: null,
+            registrationId : blob['registrationId'],
+            preKey:  {
+                keyId     : blob['preKey_keyId'],
+                publicKey : null
+            },
+            signedPreKey: {
+                keyId     : blob['signedPreKey_keyId'],
+                publicKey : null,
+                signature : null
+            }
+        };
+
+        let fileReader = new FileReader();
+        fileReader.onload = function() {
+            result['identityKey'] = this.result;
+
+            fileReader.onload = function() {
+                result['preKey']['publicKey'] = this.result;
+
+                fileReader.onload = function() {
+                    result['signedPreKey']['publicKey'] = this.result;
+
+                    fileReader.onload = function() {
+                        result['signedPreKey']['signature'] = this.result;
+
+                        callback(result);
+                    };
+
+                    fileReader.readAsArrayBuffer(blob['signedPreKey_signature']);
+                };
+
+                fileReader.readAsArrayBuffer(blob['signedPreKey_publicKey']);
+            };
+
+            fileReader.readAsArrayBuffer(blob['preKey_publicKey']);
+        };
+        fileReader.readAsArrayBuffer(blob['identityKey']);
+    }
 
     $("#connection-form").on("submit", sendConnectRequest);
     $(".confirm-button").on("click", function() {

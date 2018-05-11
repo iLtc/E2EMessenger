@@ -74,30 +74,55 @@
         return generatePreKeyBundle(bobStore, bobPreKeyId, bobSignedKeyId);
     }).then(function(preKeyBundle) {
         //
-        console.log(preKeyBundle['identityKey'].toString());
-        preKeyBundle['identityKey'] = base64ArrayBuffer(preKeyBundle['identityKey']);
-        preKeyBundle['preKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['preKey']['publicKey']);
-        preKeyBundle['signedPreKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['publicKey']);
-        preKeyBundle['signedPreKey']['signature'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['signature']);
 
-        console.log(preKeyBundle);
+        let test = {
+            identityKey: preKeyBundle['identityKey'],
+            registrationId : preKeyBundle['registrationId'],
+            preKey:  {
+                keyId     : preKeyBundle['preKey']['keyId'],
+                publicKey : preKeyBundle['preKey']['publicKey']
+            },
+            signedPreKey: {
+                keyId     : preKeyBundle['signedPreKey']['keyId'],
+                publicKey : preKeyBundle['signedPreKey']['publicKey'],
+                signature : preKeyBundle['signedPreKey']['signature']
+            }
+        };
 
-        json = JSON.stringify(preKeyBundle);
+        console.log(test);
 
-        console.log(json);
+        let temp = encode_bundle(preKeyBundle);
+        console.log(temp);
 
-        newPreKeyBundle = JSON.parse(json);
+        decode_bundle(temp, function(result) {
+            var builder = new libsignal.SessionBuilder(aliceStore, BOB_ADDRESS);
 
-        console.log(preKeyBundle);
+            builder.processPreKey(result).then(function() {
+                var originalMessage = util.toArrayBuffer("my message ......");
+                var aliceSessionCipher = new libsignal.SessionCipher(aliceStore, BOB_ADDRESS);
+                var bobSessionCipher = new libsignal.SessionCipher(bobStore, ALICE_ADDRESS);
 
-        newPreKeyBundle['identityKey'] = Base64Binary.decodeArrayBuffer(newPreKeyBundle['identityKey']);
-        newPreKeyBundle['preKey']['publicKey'] = Base64Binary.decodeArrayBuffer(newPreKeyBundle['preKey']['publicKey']);
-        newPreKeyBundle['signedPreKey']['publicKey'] = Base64Binary.decodeArrayBuffer(newPreKeyBundle['signedPreKey']['publicKey']);
-        newPreKeyBundle['signedPreKey']['signature'] = Base64Binary.decodeArrayBuffer(newPreKeyBundle['signedPreKey']['signature']);
+                aliceSessionCipher.encrypt(originalMessage).then(function(ciphertext) {
 
-        console.log(preKeyBundle);
+                    console.log(ciphertext);
+
+                    // check for ciphertext.type to be 3 which includes the PREKEY_BUNDLE
+                    return bobSessionCipher.decryptPreKeyWhisperMessage(ciphertext.body, 'binary');
+
+                }).then(function(plaintext) {
+
+                    var enc = new TextDecoder("utf-8");
+
+                    console.log(enc.decode(plaintext));
+
+                });
+            })
+
+
+        });
         //
 
+        /*
         var builder = new libsignal.SessionBuilder(aliceStore, BOB_ADDRESS);
         return builder.processPreKey(preKeyBundle).then(function() {
 
@@ -130,20 +155,24 @@
 
             });
 
-        });
+        });*/
     });
 
-    function equal (buf1, buf2)
-    {
-        if (buf1.byteLength != buf2.byteLength) return false;
-        var dv1 = new Int8Array(buf1);
-        var dv2 = new Int8Array(buf2);
-        for (var i = 0 ; i != buf1.byteLength ; i++)
-        {
-            if (dv1[i] != dv2[i]) return false;
+
+
+    /* {
+        identityKey: identity.pubKey,
+        registrationId : registrationId,
+        preKey:  {
+            keyId     : preKeyId,
+            publicKey : preKey.keyPair.pubKey
+        },
+        signedPreKey: {
+            keyId     : signedPreKeyId,
+            publicKey : signedPreKey.keyPair.pubKey,
+            signature : signedPreKey.signature
         }
-        return true;
-    }
+    };*/
 </script>
 </body>
 </html>
