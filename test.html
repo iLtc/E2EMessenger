@@ -12,8 +12,15 @@
         <input type="text" id="receiver-id">
         <input type="submit" value="Connect">
     </form>
-
 </div>
+
+<div id="confirm-div" style="display: none;">
+    <p>ID <b id="other-id"></b> wants to connect with you. Please verify the ID before confirming. </p>
+    <input class="confirm-button" type="button" value="Confirm">
+    <input class="confirm-button" type="button" value="Decline">
+</div>
+
+<hr>
 
 <div id="log"></div>
 
@@ -27,6 +34,7 @@
 
     let store = new SignalProtocolStore();
     let myId = null;
+    let otherID = null;
     let myAccessToken = null;
     let requestCount = 0;
     let isReveiver = true;
@@ -94,6 +102,8 @@
             return false;
         }
 
+        $("#connection-div").slideUp();
+
         pid = 'singCR' + requestCount;
 
         $("#log").append('<p id="' + pid + '">Sending Connection Request ...... </p>');
@@ -112,8 +122,6 @@
             if (json['status'] === 'failed') {
                 alert(json['msg']);
             } else {
-                $("#connection-div").slideUp();
-
                 isReveiver = false;
 
                 setTimeout(checkConnectResult, 3000);
@@ -177,13 +185,66 @@
 
                     setTimeout(checkConnectRequest, 3000);
                 } else {
-                    alert(json['senderId'])
+                    $("#connection-div").slideUp();
+
+                    otherID = json['senderId'];
+
+                    showOtherID();
                 }
             }
         });
     };
 
+    let showOtherID = function() {
+        $("#log").append('<p>ID <b>' + otherID +'</b> wants to connect with you</p>');
+        $("#other-id").html(otherID);
+
+        $("#confirm-div").slideDown();
+    };
+
+    let sendConfirm = function(value) {
+        $("#confirm-div").slideUp();
+
+        pid = 'singC' + requestCount;
+
+        $("#log").append('<p id="' + pid + '">Sending Confirm ...... </p>');
+
+        console.log(value);
+        if (value === "Confirm") {
+            fetch(server + '/confirm?accessToken=' + myAccessToken, {
+                method: 'POST',
+                body: JSON.stringify({"senderId": otherID, "isConfirm": "True"})
+            }).then(function (response) {
+                if (!response.ok) {
+                    // TODO:
+                } else {
+                    $("#" + pid).append("Done");
+
+                    // TODO: Handle PreKeyBundle
+                }
+            })
+        } else {
+            fetch(server + '/confirm?accessToken=' + myAccessToken, {
+                method: 'POST',
+                body: JSON.stringify({"senderId": otherID, "isConfirm": "False"})
+            }).then(function (response) {
+                if (!response.ok) {
+                    // TODO:
+                } else {
+                    $("#" + pid).append("Done");
+
+                    $("#connection-div").slideDown();
+
+                    setTimeout(checkConnectRequest, 3000);
+                }
+            })
+        }
+    };
+
     $("#connection-form").on("submit", sendConnectRequest);
+    $(".confirm-button").on("click", function() {
+        sendConfirm($(this).value);
+    });
 
     init();
 </script>
