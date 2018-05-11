@@ -30,7 +30,7 @@
 <script src="base64-binary.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script>
-    let server = "http://18.219.189.97:8080";
+    let server = "http://18.221.163.89:8080";
 
     let store = new SignalProtocolStore();
     let myId = null;
@@ -39,6 +39,8 @@
     let requestCount = 0;
     let isReveiver = true;
 
+    let mySessionCipher = null;
+
     let init = function() {
         $("#log").append('<p id="gingPKB">Generating PreKeyBundle ...... </p>');
         generateIdentity(store).then(function() {
@@ -46,6 +48,8 @@
             let signedKeyId = 1;
             return generatePreKeyBundle(store, preKeyId, signedKeyId);
         }).then(function(preKeyBundle) {
+            console.log(preKeyBundle);
+
             preKeyBundle['identityKey'] = base64ArrayBuffer(preKeyBundle['identityKey']);
             preKeyBundle['preKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['preKey']['publicKey']);
             preKeyBundle['signedPreKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['publicKey']);
@@ -154,7 +158,20 @@
 
                     setTimeout(checkConnectResult, 3000);
                 } else {
-                    // TODO: Confirm or Decline
+                    if (json["isConfirm"] === false) {
+                        $("#log").append('<p>ID <b>' + json['receiverId'] +'</b> declined your request</p>');
+
+                        $("#receiver-id").val("");
+                        $("#connection-div").slideDown();
+
+                        isReveiver = true;
+                        setTimeout(checkConnectRequest, 3000);
+                    } else {
+                        $("#log").append('<p>ID <b>' + json['receiverId'] +'</b> accept your request</p>');
+
+                        let preKeyBundle = JSON.parse(json['perKeyBundle']);
+                        handlePreKeyBundle(preKeyBundle);
+                    }
                 }
             }
         });
@@ -209,7 +226,6 @@
 
         $("#log").append('<p id="' + pid + '">Sending Confirm ...... </p>');
 
-        console.log(value);
         if (value === "Confirm") {
             fetch(server + '/confirm?accessToken=' + myAccessToken, {
                 method: 'POST',
@@ -218,11 +234,14 @@
                 if (!response.ok) {
                     // TODO:
                 } else {
-                    $("#" + pid).append("Done");
-
-                    // TODO: Handle PreKeyBundle
+                    return response.json();
                 }
-            })
+            }).then(function (json) {
+                $("#" + pid).append("Done");
+
+                let preKeyBundle = JSON.parse(json['preKeyBundle'])
+                handlePreKeyBundle(preKeyBundle);
+            });
         } else {
             fetch(server + '/confirm?accessToken=' + myAccessToken, {
                 method: 'POST',
@@ -241,9 +260,29 @@
         }
     };
 
+    let handlePreKeyBundle = function(bundle) {
+        console.log(bundle);
+
+        //bundle['identityKey'] = Base64Binary.decodeArrayBuffer(bundle['identityKey']);
+        //bundle['preKey']['publicKey'] = Base64Binary.decodeArrayBuffer(bundle['preKey']['publicKey']);
+        //bundle['signedPreKey']['publicKey'] = Base64Binary.decodeArrayBuffer(bundle['signedPreKey']['publicKey']);
+        //bundle['signedPreKey']['signature'] = Base64Binary.decodeArrayBuffer(bundle['signedPreKey']['signature']);
+
+        // console.log(bundle);
+
+        let my_address = new libsignal.SignalProtocolAddress(myId, 1);
+        let other_address = new libsignal.SignalProtocolAddress(otherID, 1);
+
+        let builder = new libsignal.SessionBuilder(store, other_address);
+
+        builder.processPreKey(bundle).then(function() {
+            //mySessionCipher = new libsignal.SessionCipher(store, other_address);
+        })
+    };
+
     $("#connection-form").on("submit", sendConnectRequest);
     $(".confirm-button").on("click", function() {
-        sendConfirm($(this).value);
+        sendConfirm($(this)[0].value);
     });
 
     init();

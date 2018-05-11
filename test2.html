@@ -9,6 +9,7 @@
 <script src="libsignal-protocol.js"></script>
 <script src="InMemorySignalProtocolStore.js"></script>
 <script src="helpers.js"></script>
+<script src="base64-binary.js"></script>
 <script>
     var KeyHelper = libsignal.KeyHelper;
 
@@ -72,6 +73,31 @@
     ]).then(function() {
         return generatePreKeyBundle(bobStore, bobPreKeyId, bobSignedKeyId);
     }).then(function(preKeyBundle) {
+        //
+        console.log(preKeyBundle['identityKey'].toString());
+        preKeyBundle['identityKey'] = base64ArrayBuffer(preKeyBundle['identityKey']);
+        preKeyBundle['preKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['preKey']['publicKey']);
+        preKeyBundle['signedPreKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['publicKey']);
+        preKeyBundle['signedPreKey']['signature'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['signature']);
+
+        console.log(preKeyBundle);
+
+        json = JSON.stringify(preKeyBundle);
+
+        console.log(json);
+
+        newPreKeyBundle = JSON.parse(json);
+
+        console.log(preKeyBundle);
+
+        newPreKeyBundle['identityKey'] = Base64Binary.decodeArrayBuffer(newPreKeyBundle['identityKey']);
+        newPreKeyBundle['preKey']['publicKey'] = Base64Binary.decodeArrayBuffer(newPreKeyBundle['preKey']['publicKey']);
+        newPreKeyBundle['signedPreKey']['publicKey'] = Base64Binary.decodeArrayBuffer(newPreKeyBundle['signedPreKey']['publicKey']);
+        newPreKeyBundle['signedPreKey']['signature'] = Base64Binary.decodeArrayBuffer(newPreKeyBundle['signedPreKey']['signature']);
+
+        console.log(preKeyBundle);
+        //
+
         var builder = new libsignal.SessionBuilder(aliceStore, BOB_ADDRESS);
         return builder.processPreKey(preKeyBundle).then(function() {
 
@@ -106,6 +132,18 @@
 
         });
     });
+
+    function equal (buf1, buf2)
+    {
+        if (buf1.byteLength != buf2.byteLength) return false;
+        var dv1 = new Int8Array(buf1);
+        var dv2 = new Int8Array(buf2);
+        for (var i = 0 ; i != buf1.byteLength ; i++)
+        {
+            if (dv1[i] != dv2[i]) return false;
+        }
+        return true;
+    }
 </script>
 </body>
 </html>
