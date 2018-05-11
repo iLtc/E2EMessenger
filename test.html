@@ -5,6 +5,8 @@
     <title>E2EMessenger</title>
 </head>
 <body>
+<div id="conversation-div"></div>
+
 <div id="connection-div" style="display: none;">
     <p>Your ID is <b id="connection-id"></b>. If you are the receiver, please give this ID to the sender. If you are the sender, please ask the receiver for the ID and type it below. </p>
     <form id="connection-form">
@@ -20,6 +22,19 @@
     <input class="confirm-button" type="button" value="Decline">
 </div>
 
+<div id="send-notice" style="display: none;">
+    <p>You are now connecting with <b id="send-id"></b>.</p>
+</div>
+
+<div id="send-div" style="display: none;">
+
+    <form id="send-form">
+        <label for="conversation-content">Your Word: </label>
+        <input type="text" id="conversation-content">
+        <input type="submit" value="Post">
+    </form>
+</div>
+
 <hr>
 
 <div id="log"></div>
@@ -27,7 +42,7 @@
 <script src="libsignal-protocol.js"></script>
 <script src="InMemorySignalProtocolStore.js"></script>
 <script src="main.js"></script>
-<script src="base64-binary.js"></script>
+<script src="helpers.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script>
     let server = "http://18.221.163.89:8080";
@@ -48,12 +63,11 @@
             let signedKeyId = 1;
             return generatePreKeyBundle(store, preKeyId, signedKeyId);
         }).then(function(preKeyBundle) {
-            console.log(preKeyBundle);
 
-            preKeyBundle['identityKey'] = base64ArrayBuffer(preKeyBundle['identityKey']);
-            preKeyBundle['preKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['preKey']['publicKey']);
-            preKeyBundle['signedPreKey']['publicKey'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['publicKey']);
-            preKeyBundle['signedPreKey']['signature'] = base64ArrayBuffer(preKeyBundle['signedPreKey']['signature']);
+            preKeyBundle['identityKey'] = ab2str(preKeyBundle['identityKey']);
+            preKeyBundle['preKey']['publicKey'] = ab2str(preKeyBundle['preKey']['publicKey']);
+            preKeyBundle['signedPreKey']['publicKey'] = ab2str(preKeyBundle['signedPreKey']['publicKey']);
+            preKeyBundle['signedPreKey']['signature'] = ab2str(preKeyBundle['signedPreKey']['signature']);
 
             $("#gingPKB").append("Done");
 
@@ -169,8 +183,10 @@
                     } else {
                         $("#log").append('<p>ID <b>' + json['receiverId'] +'</b> accept your request</p>');
 
+                        otherID = json['receiverId'];
+
                         let preKeyBundle = JSON.parse(json['perKeyBundle']);
-                        handlePreKeyBundle(preKeyBundle);
+                        handlePreKeyBundle(preKeyBundle, true);
                     }
                 }
             }
@@ -240,7 +256,7 @@
                 $("#" + pid).append("Done");
 
                 let preKeyBundle = JSON.parse(json['preKeyBundle'])
-                handlePreKeyBundle(preKeyBundle);
+                handlePreKeyBundle(preKeyBundle, false);
             });
         } else {
             fetch(server + '/confirm?accessToken=' + myAccessToken, {
@@ -260,15 +276,11 @@
         }
     };
 
-    let handlePreKeyBundle = function(bundle) {
-        console.log(bundle);
-
-        //bundle['identityKey'] = Base64Binary.decodeArrayBuffer(bundle['identityKey']);
-        //bundle['preKey']['publicKey'] = Base64Binary.decodeArrayBuffer(bundle['preKey']['publicKey']);
-        //bundle['signedPreKey']['publicKey'] = Base64Binary.decodeArrayBuffer(bundle['signedPreKey']['publicKey']);
-        //bundle['signedPreKey']['signature'] = Base64Binary.decodeArrayBuffer(bundle['signedPreKey']['signature']);
-
-        // console.log(bundle);
+    let handlePreKeyBundle = function(bundle, show) {
+        bundle['identityKey'] = str2ab(bundle['identityKey']);
+        bundle['preKey']['publicKey'] = str2ab(bundle['preKey']['publicKey']);
+        bundle['signedPreKey']['publicKey'] = str2ab(bundle['signedPreKey']['publicKey']);
+        bundle['signedPreKey']['signature'] = str2ab(bundle['signedPreKey']['signature']);
 
         let my_address = new libsignal.SignalProtocolAddress(myId, 1);
         let other_address = new libsignal.SignalProtocolAddress(otherID, 1);
@@ -276,14 +288,109 @@
         let builder = new libsignal.SessionBuilder(store, other_address);
 
         builder.processPreKey(bundle).then(function() {
-            //mySessionCipher = new libsignal.SessionCipher(store, other_address);
-        })
+            mySessionCipher = new libsignal.SessionCipher(store, other_address);
+        });
+
+        startConversation(show);
+    };
+
+    let startConversation = function(show) {
+        $("#send-id").html(otherID);
+        $("#send-notice").slideDown();
+
+        if (show) {
+            $("#send-div").slideDown();
+        } else {
+            checkConversation();
+        }
+    };
+
+    let checkConversation = function() {
+        requestCount += 1;
+
+        pid = 'checkCon' + requestCount;
+        $("#log").append('<p id="' + pid + '">Checking Conversation ...... </p>');
+
+        fetch(server + '/msg?accessToken=' + myAccessToken + '&id=' + otherID, {
+            method: 'GET'
+        }).then(function (response) {
+            if (!response.ok) {
+                // TODO:
+            } else {
+                return response.json()
+            }
+        }).then(function (json) {
+            if (json['status'] === 'failed') {
+                alert(json['msg']);
+            } else {
+                if ("data" in json) {
+                    mySessionCipher.decryptPreKeyWhisperMessage(json['data'], 'binary').then(function(plaintext) {
+                        let enc = new TextDecoder("utf-8");
+
+                        $("#conversation-div").append("<p><b>" + otherID + "</b> said: " + enc.decode(plaintext) + "</p>");
+
+                        checkConversation();
+                    })
+                } else {
+                    $("#" + pid).append(json['msg']);
+
+                    setTimeout(checkConversation, 3000);
+                }
+            }
+        });
+    };
+
+    let sendConversation = function() {
+        let value = $("#conversation-content").val();
+        $("#conversation-content").val("");
+
+        if (value === '') {
+            alert("Please type something!");
+            return false;
+        }
+
+        let originalMessage = util.toArrayBuffer(value);
+
+        mySessionCipher.encrypt(originalMessage).then(function(ciphertext) {
+            let data = ciphertext.body;
+
+            requestCount += 1;
+
+            pid = 'sendCon' + requestCount;
+            $("#log").append('<p id="' + pid + '">Sending Conversation ...... </p>');
+
+            fetch(server + '/msg?accessToken=' + myAccessToken, {
+                method: 'POST',
+                body: JSON.stringify({"receiverId": otherID, "data": data})
+            }).then(function (response) {
+                if (!response.ok) {
+                    // TODO:
+                } else {
+                    $("#" + pid).append("Done");
+                }
+            });
+        });
+        return false;
     };
 
     $("#connection-form").on("submit", sendConnectRequest);
     $(".confirm-button").on("click", function() {
         sendConfirm($(this)[0].value);
     });
+    $("#send-form").on("submit", sendConversation);
+
+    function ab2str(buf) {
+        return String.fromCharCode.apply(null, new Uint8Array(buf));
+    }
+
+    function str2ab(str) {
+        let buf = new ArrayBuffer(str.length); // 2 bytes for each char
+        let bufView = new Uint8Array(buf);
+        for (let i=0, strLen=str.length; i<strLen; i++) {
+            bufView[i] = str.charCodeAt(i);
+        }
+        return buf;
+    }
 
     init();
 </script>
