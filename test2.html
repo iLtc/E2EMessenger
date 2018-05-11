@@ -91,35 +91,41 @@
 
         console.log(test);
 
-        let temp = encode_bundle(preKeyBundle);
-        console.log(temp);
+        preKeyBundle['identityKey'] = ab2str(preKeyBundle['identityKey']);
+        preKeyBundle['preKey']['publicKey'] = ab2str(preKeyBundle['preKey']['publicKey']);
+        preKeyBundle['signedPreKey']['publicKey'] = ab2str(preKeyBundle['signedPreKey']['publicKey']);
+        preKeyBundle['signedPreKey']['signature'] = ab2str(preKeyBundle['signedPreKey']['signature']);
 
-        decode_bundle(temp, function(result) {
-            var builder = new libsignal.SessionBuilder(aliceStore, BOB_ADDRESS);
+        var json = JSON.parse(JSON.stringify(preKeyBundle));
 
-            builder.processPreKey(result).then(function() {
-                var originalMessage = util.toArrayBuffer("my message ......");
-                var aliceSessionCipher = new libsignal.SessionCipher(aliceStore, BOB_ADDRESS);
-                var bobSessionCipher = new libsignal.SessionCipher(bobStore, ALICE_ADDRESS);
+        json['identityKey'] = str2ab(json['identityKey']);
+        json['preKey']['publicKey'] = str2ab(json['preKey']['publicKey']);
+        json['signedPreKey']['publicKey'] = str2ab(json['signedPreKey']['publicKey']);
+        json['signedPreKey']['signature'] = str2ab(json['signedPreKey']['signature']);
 
-                aliceSessionCipher.encrypt(originalMessage).then(function(ciphertext) {
+        var builder = new libsignial.SessionBuilder(aliceStore, BOB_ADDRESS);
 
-                    console.log(ciphertext);
+        builder.processPreKey(json).then(function() {
+            var originalMessage = util.toArrayBuffer("my message ......");
+            var aliceSessionCipher = new libsignal.SessionCipher(aliceStore, BOB_ADDRESS);
+            var bobSessionCipher = new libsignal.SessionCipher(bobStore, ALICE_ADDRESS);
 
-                    // check for ciphertext.type to be 3 which includes the PREKEY_BUNDLE
-                    return bobSessionCipher.decryptPreKeyWhisperMessage(ciphertext.body, 'binary');
+            aliceSessionCipher.encrypt(originalMessage).then(function(ciphertext) {
 
-                }).then(function(plaintext) {
+                console.log(ciphertext);
 
-                    var enc = new TextDecoder("utf-8");
+                // check for ciphertext.type to be 3 which includes the PREKEY_BUNDLE
+                return bobSessionCipher.decryptPreKeyWhisperMessage(ciphertext.body, 'binary');
 
-                    console.log(enc.decode(plaintext));
+            }).then(function(plaintext) {
 
-                });
-            })
+                var enc = new TextDecoder("utf-8");
 
+                console.log(enc.decode(plaintext));
 
-        });
+            });
+        })
+
         //
 
         /*
@@ -158,6 +164,18 @@
         });*/
     });
 
+    function ab2str(buf) {
+        return String.fromCharCode.apply(null, new Uint8Array(buf));
+    }
+
+    function str2ab(str) {
+        var buf = new ArrayBuffer(str.length); // 2 bytes for each char
+        var bufView = new Uint8Array(buf);
+        for (var i=0, strLen=str.length; i<strLen; i++) {
+            bufView[i] = str.charCodeAt(i);
+        }
+        return buf;
+    }
 
 
     /* {
