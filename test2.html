@@ -11,9 +11,9 @@
 <script src="helpers.js"></script>
 <script src="base64-binary.js"></script>
 <script>
-    var KeyHelper = libsignal.KeyHelper;
+    let KeyHelper = libsignal.KeyHelper;
 
-    function generateIdentity(store) {
+    let generateIdentity = function(store) {
         return Promise.all([
             KeyHelper.generateIdentityKeyPair(),
             KeyHelper.generateRegistrationId(),
@@ -21,8 +21,30 @@
             store.put('identityKey', result[0]);
             store.put('registrationId', result[1]);
         });
-    }
+    };
 
+    let generatePreKey = function(store, preKeyIds) {
+        let generatePreKeys = [];
+
+        preKeyIds.forEach(function (preKeyId) {
+            generatePreKeys.push(KeyHelper.generatePreKey(preKeyId));
+        });
+
+        return Promise.all(generatePreKeys).then(function(keys) {
+            keys.forEach(function (key) {
+                store.storePreKey(key.keyId, key.keyPair);
+            });
+
+            return keys;
+        });
+    };
+
+    let bobStore = new SignalProtocolStore();
+
+    generatePreKey(bobStore, [3, 4, 5, 6, 7]).then(function (keys) {
+        console.log(keys)
+    })
+/*
     function generatePreKeyBundle(store, preKeyId, signedPreKeyId) {
         return Promise.all([
             store.getIdentityKeyPair(),
@@ -58,6 +80,7 @@
         });
     }
 
+    /*
     var ALICE_ADDRESS = new libsignal.SignalProtocolAddress("xxxxxxxxx", 1);
     var BOB_ADDRESS   = new libsignal.SignalProtocolAddress("yyyyyyyyyyyyy", 1);
 
@@ -159,9 +182,10 @@
 
             });
 
-        });*/
+        })
     });
-
+*/
+/*
 
     function ab2str(buf) {
         return String.fromCharCode.apply(null, new Uint8Array(buf));
@@ -175,22 +199,7 @@
         }
         return buf;
     }
-
-
-
-    /* {
-        identityKey: identity.pubKey,
-        registrationId : registrationId,
-        preKey:  {
-            keyId     : preKeyId,
-            publicKey : preKey.keyPair.pubKey
-        },
-        signedPreKey: {
-            keyId     : signedPreKeyId,
-            publicKey : signedPreKey.keyPair.pubKey,
-            signature : signedPreKey.signature
-        }
-    };*/
+    */
 </script>
 </body>
 </html>
