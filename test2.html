@@ -39,11 +39,31 @@
         });
     };
 
+    let generateSignedPreKey = function(store, signedPreKeyId) {
+        return store.getIdentityKeyPair().then(function (identity) {
+            return KeyHelper.generateSignedPreKey(identity, signedPreKeyId).then(function (signedPreKey) {
+                store.storeSignedPreKey(signedPreKey.keyId, signedPreKey.keyPair);
+
+                return signedPreKey;
+            });
+        });
+    };
+
     let bobStore = new SignalProtocolStore();
 
+    /*
     generatePreKey(bobStore, [3, 4, 5, 6, 7]).then(function (keys) {
         console.log(keys)
     })
+    */
+
+    generateIdentity(bobStore).then(function () {
+        generateSignedPreKey(bobStore, 1).then(function (keys) {
+            console.log(keys)
+        })
+    });
+
+
 /*
     function generatePreKeyBundle(store, preKeyId, signedPreKeyId) {
         return Promise.all([
