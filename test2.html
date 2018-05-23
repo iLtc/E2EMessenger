@@ -73,54 +73,32 @@
         });
     };
 
+    let aliceAddress = new libsignal.SignalProtocolAddress(123, 1);
+    let bobAddress   = new libsignal.SignalProtocolAddress(456, 1);
+
+    let aliceStore = new SignalProtocolStore();
     let bobStore = new SignalProtocolStore();
 
-    generateIdentity(bobStore).then(function () {
-        generateSignedPreKey(bobStore, 1).then(function (signedPreKey) {
-            generatePreKey(bobStore, [3, 4, 5, 6, 7]).then(function (preKeys) {
+    let aliceSessionCipher = new libsignal.SessionCipher(aliceStore, bobAddress);
+    let bobSessionCipher = new libsignal.SessionCipher(bobStore, aliceAddress);
+
+    let bobSignedKeyId = 1;
+    let bobPreKeyIds = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+    Promise.all([
+        generateIdentity(aliceStore),
+        generateIdentity(bobStore)
+    ]).then(function() {
+        generateSignedPreKey(bobStore, bobSignedKeyId).then(function (signedPreKey) {
+            generatePreKey(bobStore, bobPreKeyIds).then(function (preKeys) {
                 generatePreKeyBundle(bobStore, preKeys[0], signedPreKey).then(function (preKeyBundle) {
-                    console.log(preKeyBundle);
+
                 })
             })
         })
     });
 
 /*
-
-    /*
-    var ALICE_ADDRESS = new libsignal.SignalProtocolAddress("xxxxxxxxx", 1);
-    var BOB_ADDRESS   = new libsignal.SignalProtocolAddress("yyyyyyyyyyyyy", 1);
-
-    var aliceStore = new SignalProtocolStore();
-
-    var bobStore = new SignalProtocolStore();
-    var bobPreKeyId = 1337;
-    var bobSignedKeyId = 1;
-
-    Promise.all([
-        generateIdentity(aliceStore),
-        generateIdentity(bobStore)
-    ]).then(function() {
-        return generatePreKeyBundle(bobStore, bobPreKeyId, bobSignedKeyId);
-    }).then(function(preKeyBundle) {
-        //
-
-        let test = {
-            identityKey: preKeyBundle['identityKey'],
-            registrationId : preKeyBundle['registrationId'],
-            preKey:  {
-                keyId     : preKeyBundle['preKey']['keyId'],
-                publicKey : preKeyBundle['preKey']['publicKey']
-            },
-            signedPreKey: {
-                keyId     : preKeyBundle['signedPreKey']['keyId'],
-                publicKey : preKeyBundle['signedPreKey']['publicKey'],
-                signature : preKeyBundle['signedPreKey']['signature']
-            }
-        };
-
-        console.log(preKeyBundle['identityKey']);
-
         preKeyBundle['identityKey'] = ab2str(preKeyBundle['identityKey']);
         preKeyBundle['preKey']['publicKey'] = ab2str(preKeyBundle['preKey']['publicKey']);
         preKeyBundle['signedPreKey']['publicKey'] = ab2str(preKeyBundle['signedPreKey']['publicKey']);
@@ -137,8 +115,7 @@
 
         builder.processPreKey(json).then(function() {
             var originalMessage = util.toArrayBuffer("my message ......");
-            var aliceSessionCipher = new libsignal.SessionCipher(aliceStore, BOB_ADDRESS);
-            var bobSessionCipher = new libsignal.SessionCipher(bobStore, ALICE_ADDRESS);
+
 
             aliceSessionCipher.encrypt(originalMessage).then(function(ciphertext) {
 
