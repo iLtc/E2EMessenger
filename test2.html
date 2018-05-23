@@ -49,56 +49,43 @@
         });
     };
 
-    let bobStore = new SignalProtocolStore();
-
-    /*
-    generatePreKey(bobStore, [3, 4, 5, 6, 7]).then(function (keys) {
-        console.log(keys)
-    })
-    */
-
-    generateIdentity(bobStore).then(function () {
-        generateSignedPreKey(bobStore, 1).then(function (keys) {
-            console.log(keys)
-        })
-    });
-
-
-/*
-    function generatePreKeyBundle(store, preKeyId, signedPreKeyId) {
+    let generatePreKeyBundle = function (store, preKey, signedPreKey) {
         return Promise.all([
             store.getIdentityKeyPair(),
             store.getLocalRegistrationId()
         ]).then(function(result) {
-            var identity = result[0];
-            var registrationId = result[1];
+            let identity = result[0];
+            let registrationId = result[1];
 
-            return Promise.all([
-                KeyHelper.generatePreKey(preKeyId),
-                KeyHelper.generateSignedPreKey(identity, signedPreKeyId),
-            ]).then(function(keys) {
-                var preKey = keys[0];
-                var signedPreKey = keys[1];
-
-                store.storePreKey(preKeyId, preKey.keyPair);
-                store.storeSignedPreKey(signedPreKeyId, signedPreKey.keyPair);
-
-                return {
-                    identityKey: identity.pubKey,
-                    registrationId : registrationId,
-                    preKey:  {
-                        keyId     : preKeyId,
-                        publicKey : preKey.keyPair.pubKey
-                    },
-                    signedPreKey: {
-                        keyId     : signedPreKeyId,
-                        publicKey : signedPreKey.keyPair.pubKey,
-                        signature : signedPreKey.signature
-                    }
-                };
-            });
+            return {
+                identityKey: identity.pubKey,
+                registrationId : registrationId,
+                preKey:  {
+                    keyId     : preKey.keyId,
+                    publicKey : preKey.keyPair.pubKey
+                },
+                signedPreKey: {
+                    keyId     : signedPreKey.keyId,
+                    publicKey : signedPreKey.keyPair.pubKey,
+                    signature : signedPreKey.signature
+                }
+            };
         });
-    }
+    };
+
+    let bobStore = new SignalProtocolStore();
+
+    generateIdentity(bobStore).then(function () {
+        generateSignedPreKey(bobStore, 1).then(function (signedPreKey) {
+            generatePreKey(bobStore, [3, 4, 5, 6, 7]).then(function (preKeys) {
+                generatePreKeyBundle(bobStore, preKeys[0], signedPreKey).then(function (preKeyBundle) {
+                    console.log(preKeyBundle);
+                })
+            })
+        })
+    });
+
+/*
 
     /*
     var ALICE_ADDRESS = new libsignal.SignalProtocolAddress("xxxxxxxxx", 1);
