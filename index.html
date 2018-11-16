@@ -1,6 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>E2EMessenger</title>
+</head>
+<body>
+<div id="conversation-div"></div>
+
+<div id="connection-div" style="display: none;">
+    <p>Your ID is <b id="connection-id"></b>. If you are the receiver, please give this ID to the sender. If you are the sender, please ask the receiver for the ID and type it below. </p>
+    <form id="connection-form">
+        <label for="receiver-id">Receiver ID: </label>
+        <input type="text" id="receiver-id">
+        <input type="submit" value="Connect">
+    </form>
+</div>
+
+<div id="confirm-div" style="display: none;">
+    <p>ID <b id="other-id"></b> wants to connect with you. Please verify the ID before confirming. </p>
+    <input class="confirm-button" type="button" value="Confirm">
+    <input class="confirm-button" type="button" value="Decline">
+</div>
+
+<div id="send-notice" style="display: none;">
+    <p>You are now connecting with <b id="send-id"></b>.</p>
+</div>
+
+<div id="send-div" style="display: none;">
+
+    <form id="send-form">
+        <label for="conversation-content">Your Word: </label>
+        <input type="text" id="conversation-content">
+        <input type="submit" value="Post">
+    </form>
+</div>
+
+<hr>
+
+<div id="log"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    var socket = io();
+    let myId = null;
+    let otherID = null;
+    let isReveiver = true;
 
-    socket.emit('chat message', 123);
+    let socket = io();
+
+    socket.on('receiver id', function(id) {
+        myId = id;
+
+        showID();
+    });
+
+    let showID = function() {
+        $("#log").append('<p>Your ID is <b>' + myId +'</b></p>');
+        $("#connection-id").html(myId);
+        $("#connection-div").slideDown();
+    };
+
+    let sendConnectRequest = function() {
+        let value = $("#receiver-id").val();
+        if (value === '') {
+            alert("Please type Receiver ID!");
+            return false;
+        }
+        if (value === myId.toString()) {
+            alert("You cannot connect to yourself.");
+            return false;
+        }
+
+        socket.emit('sender connect request', value);
+
+        $("#connection-div").slideUp();
+
+        return false;
+    };
+
+    socket.on('sender connect response', function(data) {
+        if (data['status'] === 'failed') {
+            alert(data['msg']);
+            $("#connection-div").slideDown();
+        } else {
+            if (data["isConfirm"] === false) {
+                $("#log").append('<p>ID <b>' + data['receiverId'] +'</b> declined your request</p>');
+                $("#receiver-id").val("");
+                $("#connection-div").slideDown();
+                isReveiver = true;
+                setTimeout(checkConnectRequest, 3000);
+            } else {
+                $("#log").append('<p>ID <b>' + data['receiverId'] +'</b> accept your request</p>');
+                otherID = data['receiverId'];
+                startConversation();
+            }
+        }
+    });
+
+    socket.on('receiver connect request', function(data) {
+        $("#connection-div").slideUp();
+        otherID = data['senderId'];
+        showOtherID();
+    });
+
+    let showOtherID = function() {
+        $("#log").append('<p>ID <b>' + otherID +'</b> wants to connect with you</p>');
+        $("#other-id").html(otherID);
+        $("#confirm-div").slideDown();
+    };
+
+    let sendConfirm = function(value) {
+        $("#confirm-div").slideUp();
+
+        let isConfirm = value === "Confirm";
+
+        socket.emit('receiver connect response', {'id': otherID, 'confirm': isConfirm});
+
+        if (value === "Confirm") {
+            startConversation()
+        } else {
+            $("#connection-div").slideDown();
+        }
+    };
+
+    let startConversation = function() {
+        $("#send-id").html(otherID);
+        $("#send-notice").slideDown();
+        $("#send-div").slideDown();
+    };
+
+    socket.on('receive msg', function(data){
+        $("#conversation-div").append("<p><b>" + otherID + "</b> said: " + data['msg'] + "</p>");
+    });
+
+    let sendConversation = function() {
+        let value = $("#conversation-content").val();
+        $("#conversation-content").val("");
+        if (value === '') {
+            alert("Please type something!");
+            return false;
+        }
+        socket.emit('send msg', {'id': otherID, 'msg': value});
+        return false;
+    };
+
+    $("#connection-form").on("submit", sendConnectRequest);
+    $(".confirm-button").on("click", function() {
+        sendConfirm($(this)[0].value);
+    });
+    $("#send-form").on("submit", sendConversation);
+
 </script>
+</body>
+</html>
