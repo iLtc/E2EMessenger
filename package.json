@@ -3,6 +3,10 @@
   "version": "0.0.1",
   "description": "An end to end encryption chat app.",
   "license": "UNLICENSED",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "express": "^4.15.2",
     "socket.io": "^2.1.1"
