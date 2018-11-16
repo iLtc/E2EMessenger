@@ -1,0 +1,13 @@
+{
+  "name": "e2e-messenger",
+  "version": "0.0.1",
+  "description": "An end to end encryption chat app.",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^4.15.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/iLtc/E2EMessenger.git"
+  }
+}
