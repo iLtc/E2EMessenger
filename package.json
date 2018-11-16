@@ -4,7 +4,8 @@
   "description": "An end to end encryption chat app.",
   "license": "UNLICENSED",
   "dependencies": {
-    "express": "^4.15.2"
+    "express": "^4.15.2",
+    "socket.io": "^2.1.1"
   },
   "repository": {
     "type": "git",
