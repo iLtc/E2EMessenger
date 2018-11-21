@@ -130,7 +130,8 @@
     };
 
     socket.on('receive msg', function(data){
-        $("#conversation-div").append("<p><b>" + otherID + "</b> said: " + data['msg'] + "</p>");
+        let msg = data['msg'].replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        $("#conversation-div").append("<p><b>" + otherID + "</b> said: " + msg + "</p>");
     });
 
     let sendConversation = function() {
